@@ -15,7 +15,7 @@ def clone_repo(repo_url, dest="cloned_repo"):
     else:
         print("Repo already cloned")
 
-def walk_and_emit(repo_path):
+def walk_and_emit(repo_path, repo_name):
     print("Walking repo...")
     for path in Path(repo_path).rglob("*.*"):
         try:
@@ -26,7 +26,8 @@ def walk_and_emit(repo_path):
         doc = {
             "id": str(path),
             "path": str(path),
-            "code_snippet": text[:5000],  # keep short for Day-1
+            "repo": repo_name,   # new field, extremely useful
+            "code": text[:5000], # MATCH JAVA AND LUCENE
             "lang": path.suffix
         }
 
@@ -35,6 +36,8 @@ def walk_and_emit(repo_path):
 
 if __name__ == "__main__":
     repo = "https://github.com/spring-projects/spring-petclinic.git"
+    repo_name = repo.split("/")[-1].replace(".git", "")   # <── Extract name
+
     clone_repo(repo)
-    walk_and_emit("cloned_repo")
+    walk_and_emit("cloned_repo", repo_name)
 # placeholder crawler

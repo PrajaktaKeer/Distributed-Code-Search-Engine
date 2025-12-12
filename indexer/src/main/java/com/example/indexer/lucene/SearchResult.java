@@ -12,4 +12,5 @@ import lombok.Setter;
 public class SearchResult {
     private String path;
     private float score;
+    private String snippet;
 }

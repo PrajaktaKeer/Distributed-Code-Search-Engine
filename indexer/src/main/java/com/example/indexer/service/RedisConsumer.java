@@ -48,11 +48,6 @@ public class RedisConsumer {
 
         while (true) {
             try {
-//                List<MapRecord<String, Object, Object>> msgs =
-//                        redisTemplate.opsForStream().read(
-//                                StreamReadOptions.empty().block(Duration.ofSeconds(5)),
-//                                StreamOffset.latest("dcse_stream")
-//                        );
                 List<MapRecord<String, Object, Object>> msgs =
                         redisTemplate.opsForStream().read(
                                 Consumer.from(GROUP, CONSUMER),

@@ -24,8 +24,8 @@ def walk_and_emit(repo_path, repo_name):
             continue
 
         doc = {
-            "id": str(path),
-            "path": str(path),
+            "id": str(path.resolve()),
+            "path": str(path.resolve()),
             "repo": repo_name,   # new field, extremely useful
             "code": text[:5000], # MATCH JAVA AND LUCENE
             "lang": path.suffix

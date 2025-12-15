@@ -6,12 +6,10 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Component;
@@ -139,13 +137,13 @@ public class LuceneSearcher {
     @PreDestroy
     public void shutdown() throws IOException {
         System.out.println("🔻 Closing Lucene reader...");
-        reader.close();
+        if(reader != null) reader.close();
     }
 
     private String highlight(String field, String text, Query query) {
         try {
             QueryScorer scorer = new QueryScorer(query, field);
-            Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 120);
+            Fragmenter fragmenter = new SimpleSpanFragmenter(scorer, 150);
 
             SimpleHTMLFormatter formatter = new SimpleHTMLFormatter("<b>", "</b>");
             Highlighter highlighter = new Highlighter(formatter, scorer);
@@ -158,28 +156,47 @@ public class LuceneSearcher {
         }
     }
 
+    private Query buildQuery(String q) throws Exception {
+
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+
+        // 1️⃣ Multi-field keyword search
+        builder.add(parser.parse(q), BooleanClause.Occur.SHOULD);
+
+        // 2️⃣ Phrase query ONLY on code field
+        PhraseQuery phrase = new PhraseQuery.Builder()
+                .add(new Term("code", q.toLowerCase()))
+                .build();
+
+        builder.add(phrase, BooleanClause.Occur.SHOULD);
+
+        // 3️⃣ Prefix autocomplete on code
+        builder.add(new PrefixQuery(new Term("code", q.toLowerCase())),
+                BooleanClause.Occur.SHOULD);
+
+        return builder.build();
+    }
+
+
 
     public List<SearchResult> search(String queryText, int topN) throws Exception {
 
-//        QueryParser parser = new QueryParser("code", new StandardAnalyzer());
+        if (searcher == null) return List.of();
 
-        Query query = parser.parse(queryText);
+//        Query query = parser.parse(queryText);
+        Query query = buildQuery(queryText);
         TopDocs docs = searcher.search(query, topN);
 
         List<SearchResult> results = new ArrayList<>();
 
         for (ScoreDoc sd : docs.scoreDocs) {
             Document doc = searcher.doc(sd.doc);
-            // read file contents for highlighting
             String code = Files.readString(Paths.get(doc.get("path")));
-
             String snippet = highlight("code", code, query);
 
             results.add(new SearchResult(doc.get("path"), sd.score, snippet));
-//            results.add(new SearchResult(d.get("path"), sd.score));
         }
 
         return results;
-
     }
 }

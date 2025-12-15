@@ -24,5 +24,14 @@ public class SearchController {
                                      @RequestParam(defaultValue = "20") int n) throws Exception {
         return searcher.search(q, n);
     }
+
+    @GetMapping("/search/explain")
+    public String explain(
+            @RequestParam String q,
+            @RequestParam String hash
+    ) throws Exception {
+        return searcher.explainByHash(q, hash);
+    }
+
 }
 

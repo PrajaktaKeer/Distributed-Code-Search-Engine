@@ -102,10 +102,18 @@ public class LuceneWriter {
         luceneDoc.add(new Field("code", doc.getCode(), codeType));
         luceneDoc.add(new TextField("lang", doc.getLang(), Field.Store.YES));
         luceneDoc.add(new StringField("hash", doc.getHash(), Field.Store.YES));
+        luceneDoc.add(new TextField("symbols", extractSymbols(doc.getCode()), Field.Store.NO));
 
         writer.addDocument(luceneDoc);
         writer.commit();
     }
+
+    private String extractSymbols(String code) {
+        return code
+                .replaceAll("[^a-zA-Z0-9_]", " ")
+                .replaceAll("\\b(class|public|private|void|return)\\b", "");
+    }
+
 
     public synchronized long getNumDocs() throws IOException {
         return writer.numRamDocs();

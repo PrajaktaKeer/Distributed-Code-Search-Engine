@@ -142,11 +142,18 @@ public class LuceneSearcher {
                 .add(new Term("code", q.toLowerCase()))
                 .build();
 
-        builder.add(phrase, BooleanClause.Occur.SHOULD);
+//        builder.add(phrase, BooleanClause.Occur.SHOULD);
+        builder.add(new BoostQuery(phrase, 3.0f), BooleanClause.Occur.SHOULD);
 
         // 3️⃣ Prefix autocomplete on code
         builder.add(new PrefixQuery(new Term("code", q.toLowerCase())),
                 BooleanClause.Occur.SHOULD);
+
+        Query symbolQuery = new BoostQuery(
+                new QueryParser("symbols", analyzer).parse(q),
+                4.0f
+        );
+        builder.add(symbolQuery, BooleanClause.Occur.SHOULD);
 
         return builder.build();
     }
@@ -161,16 +168,66 @@ public class LuceneSearcher {
         Query query = buildQuery(queryText);
         TopDocs docs = searcher.search(query, topN);
 
+//        List<SearchResult> results = new ArrayList<>();
+//
+//        for (ScoreDoc sd : docs.scoreDocs) {
+//            Document doc = searcher.doc(sd.doc);
+//            String code = Files.readString(Paths.get(doc.get("path")));
+//            String snippet = highlight("code", code, query);
+//
+//            results.add(new SearchResult(doc.get("path"), sd.score, snippet));
+//        }
+
+        Map<String, Integer> repoCounts = new HashMap<>();
         List<SearchResult> results = new ArrayList<>();
 
         for (ScoreDoc sd : docs.scoreDocs) {
             Document doc = searcher.doc(sd.doc);
-            String code = Files.readString(Paths.get(doc.get("path")));
+
+            String repo = doc.get("repo");
+            String path = doc.get("path");
+
+            float adjustedScore = sd.score;
+
+            int seenCount = repoCounts.getOrDefault(repo, 0);
+            if (seenCount > 0) {
+                adjustedScore *= Math.pow(0.85, seenCount); // 🔥 soft demotion
+            }
+
+            repoCounts.put(repo, seenCount + 1);
+
+            String code = Files.readString(Path.of(path));
             String snippet = highlight("code", code, query);
 
-            results.add(new SearchResult(doc.get("path"), sd.score, snippet));
+            results.add(new SearchResult(
+                    path,
+                    adjustedScore,
+                    snippet,
+                    repo,
+                    doc.get("hash")
+                    ));
         }
-
         return results;
     }
+
+    public String explainByHash(String queryText, String hash) throws Exception {
+
+        Query query = parser.parse(queryText);
+
+        // Search enough docs to find the target
+        TopDocs docs = searcher.search(query, 1000);
+
+        for (ScoreDoc sd : docs.scoreDocs) {
+            Document d = searcher.doc(sd.doc);
+
+            if (hash.equals(d.get("hash"))) {
+                Explanation explanation = searcher.explain(query, sd.doc);
+                return explanation.toString();
+            }
+        }
+
+        return "No matching document found for hash: " + hash;
+    }
+
+
 }

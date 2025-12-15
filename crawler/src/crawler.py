@@ -1,3 +1,4 @@
+import hashlib
 import os
 import json
 import redis
@@ -26,13 +27,17 @@ def walk_and_emit(repo_path, repo_name):
         doc = {
             "id": str(path.resolve()),
             "path": str(path.resolve()),
-            "repo": repo_name,   # new field, extremely useful
-            "code": text[:5000], # MATCH JAVA AND LUCENE
-            "lang": path.suffix
+            "repo": repo_name,
+            "code": text[:5000],
+            "lang": path.suffix,
+            "hash": compute_hash(text)
         }
 
         r.xadd(STREAM, {"doc": json.dumps(doc)})
         print("Emitted:", path)
+
+def compute_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 if __name__ == "__main__":
     repo = "https://github.com/spring-projects/spring-petclinic.git"

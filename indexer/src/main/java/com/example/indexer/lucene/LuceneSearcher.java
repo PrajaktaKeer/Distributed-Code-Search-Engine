@@ -33,32 +33,6 @@ public class LuceneSearcher {
     private final Analyzer analyzer;
     private final Path indexPath = Paths.get("lucene-index");
 
-//    private LuceneSearcher() {
-//        try {
-//            reader = DirectoryReader.open(
-//                    FSDirectory.open(Paths.get("lucene-index"))
-//            );
-//        } catch (IOException e) {
-//            System.out.println("Error while reading Lucene Index. " + e.getMessage());
-//        }
-//
-//        if(reader != null) searcher = new IndexSearcher(reader);
-//        analyzer = new StandardAnalyzer();
-//
-//        Map<String, Float> boosts = new HashMap<>();
-//        boosts.put("path", 2.0f);
-//        boosts.put("repo", 1.5f);
-//        boosts.put("code", 1.0f);
-//        boosts.put("lang", 0.5f);
-//
-//        parser = new MultiFieldQueryParser(
-//                new String[]{"code", "path", "repo", "lang"},
-//                analyzer,
-//                boosts
-//        );
-//        parser.setDefaultOperator(QueryParser.Operator.AND);
-//    }
-
     public LuceneSearcher() throws IOException {
         analyzer = new StandardAnalyzer();
 

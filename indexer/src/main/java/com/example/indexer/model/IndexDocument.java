@@ -12,4 +12,5 @@ public class IndexDocument {
     private String path;
     private String code;
     private String lang;
+    private String hash;
 }

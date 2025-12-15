@@ -4,6 +4,10 @@ import com.example.indexer.model.IndexDocument;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Component;
 
@@ -30,20 +34,39 @@ public class LuceneWriter {
     /**
      * Idempotent update: replace document with same 'id' term.
      */
-    public synchronized void updateDocument(IndexDocument d) throws IOException {
-        Document luceneDoc = new Document();
+    public synchronized void updateDocument(IndexDocument doc) throws IOException {
 
-        luceneDoc.add(new StringField("id", d.getId(), Field.Store.YES));
-        luceneDoc.add(new TextField("path", d.getPath(), Field.Store.YES));
-        if (d.getRepo() != null) luceneDoc.add(new StringField("repo", d.getRepo(), Field.Store.YES));
-        if (d.getLang() != null) luceneDoc.add(new StringField("lang", d.getLang(), Field.Store.YES));
-        // index code as text (not stored to keep index small), but you can store if you want
-        if (d.getCode() != null) luceneDoc.add(new TextField("code", d.getCode(), Field.Store.NO));
+        String oldHash = getExistingHash(doc.getId());
 
-        // updateDocument will delete existing doc with the Term("id", ...) and add this one atomically
-        writer.updateDocument(new Term("id", d.getId()), luceneDoc);
-        writer.commit();
+        if (oldHash != null && oldHash.equals(doc.getHash())) {
+            System.out.println("⏭️ Skipping unchanged file: " + doc.getPath());
+            return;
+        }
+
+        addDocument(doc);
+
+        System.out.println("✅ Indexed/Updated Doc: " + doc.getPath());
     }
+
+
+    private String getExistingHash(String docId) throws IOException {
+
+        try (DirectoryReader reader = DirectoryReader.open(writer)) {
+            IndexSearcher tempSearcher = new IndexSearcher(reader);
+
+            Query q = new TermQuery(new Term("id", docId));
+            TopDocs hits = tempSearcher.search(q, 1);
+
+            if (hits.totalHits.value == 0) {
+                return null;
+            }
+
+            Document existing = tempSearcher.doc(hits.scoreDocs[0].doc);
+            return existing.get("hash");
+        }
+    }
+
+
 
     public void addDocument(IndexDocument doc) throws IOException {
         Document luceneDoc = new Document();
@@ -78,6 +101,7 @@ public class LuceneWriter {
         luceneDoc.add(new Field("repo", doc.getRepo(), repoType));
         luceneDoc.add(new Field("code", doc.getCode(), codeType));
         luceneDoc.add(new TextField("lang", doc.getLang(), Field.Store.YES));
+        luceneDoc.add(new StringField("hash", doc.getHash(), Field.Store.YES));
 
         writer.addDocument(luceneDoc);
         writer.commit();

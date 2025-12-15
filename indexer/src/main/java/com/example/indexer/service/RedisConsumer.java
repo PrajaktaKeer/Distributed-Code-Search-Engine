@@ -218,6 +218,5 @@ public class RedisConsumer {
         // idempotent update to avoid duplicates
         luceneWriter.updateDocument(doc);
 
-        log.info("Indexed and updated doc id={}", doc.getId());
     }
 }

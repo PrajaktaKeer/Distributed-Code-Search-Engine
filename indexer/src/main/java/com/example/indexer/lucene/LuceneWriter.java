@@ -1,6 +1,8 @@
 package com.example.indexer.lucene;
 
 import com.example.indexer.model.IndexDocument;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Paths;
 
+@Slf4j
 @Component
 public class LuceneWriter {
 
@@ -21,9 +24,9 @@ public class LuceneWriter {
 
     private final IndexWriter writer;
 
-    public LuceneWriter() throws IOException {
+    public LuceneWriter(SearchAnalyzer analyzerBuilder) throws IOException {
         FSDirectory dir = FSDirectory.open(Paths.get(INDEX_DIR));
-        StandardAnalyzer analyzer = new StandardAnalyzer();
+        Analyzer analyzer = analyzerBuilder.build();
 
         IndexWriterConfig config = new IndexWriterConfig(analyzer);
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
@@ -92,17 +95,26 @@ public class LuceneWriter {
         repoType.setTokenized(false);
         repoType.freeze();
 
+        String content = doc.getCode();
+
+        boolean isController = content.contains("@RestController") || content.contains("@Controller");
+
+        boolean hasMapping =
+                content.contains("@RequestMapping") ||
+                        content.contains("@GetMapping") ||
+                        content.contains("@PostMapping") ||
+                        content.contains("@PutMapping") ||
+                        content.contains("@DeleteMapping");
 
         luceneDoc.add(new StringField("id", doc.getId(), Field.Store.YES));
-//        luceneDoc.add(new TextField("path", doc.getPath(), Field.Store.YES));
-//        luceneDoc.add(new TextField("repo", doc.getRepo(), Field.Store.YES));
-//        luceneDoc.add(new TextField("code", doc.getCode(), Field.Store.YES));
         luceneDoc.add(new Field("path", doc.getPath(), pathType));
         luceneDoc.add(new Field("repo", doc.getRepo(), repoType));
         luceneDoc.add(new Field("code", doc.getCode(), codeType));
         luceneDoc.add(new TextField("lang", doc.getLang(), Field.Store.YES));
         luceneDoc.add(new StringField("hash", doc.getHash(), Field.Store.YES));
         luceneDoc.add(new TextField("symbols", extractSymbols(doc.getCode()), Field.Store.NO));
+        luceneDoc.add(new StringField("is_controller", isController ? "true" : "false", Field.Store.YES));
+        luceneDoc.add(new StringField("has_mapping", hasMapping ? "true" : "false", Field.Store.YES));
 
         writer.addDocument(luceneDoc);
         writer.commit();

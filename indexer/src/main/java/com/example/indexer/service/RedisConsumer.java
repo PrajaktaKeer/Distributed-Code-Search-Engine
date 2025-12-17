@@ -6,6 +6,7 @@ import jakarta.annotation.PostConstruct;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,6 +24,10 @@ import java.util.UUID;
  * Designed for horizontal scaling and exactly-once idempotent indexing (LuceneWriter.updateDocument).
  */
 @Service
+@ConditionalOnProperty(
+        name = "feature.redis.enabled",
+        havingValue = "true"
+)
 public class RedisConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(RedisConsumer.class);

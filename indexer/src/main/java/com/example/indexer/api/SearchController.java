@@ -1,13 +1,11 @@
 package com.example.indexer.api;
 
 import com.example.indexer.lucene.LuceneSearcher;
-import com.example.indexer.lucene.SearchResult;
+import org.apache.lucene.search.ScoreDoc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -20,9 +18,20 @@ public class SearchController {
     }
 
     @GetMapping("/search")
-    public List<SearchResult> search(@RequestParam String q,
-                                     @RequestParam(defaultValue = "20") int n) throws Exception {
-        return searcher.search(q, n);
+    public SearchResponse search(@RequestParam String q,
+                                 @RequestParam(defaultValue = "20") int n,
+                                 @RequestParam(required = false) Integer lastDoc,
+                                 @RequestParam(required = false) Float lastScore) throws Exception {
+//        return searcher.search(q, n);
+
+        ScoreDoc searchAfter = null;
+
+        if (lastDoc != null && lastScore != null) {
+            searchAfter = new ScoreDoc(lastDoc, lastScore);
+        }
+
+        SearchPage page = searcher.search(q, n, searchAfter);
+        return SearchResponse.from(page);
     }
 
     @GetMapping("/search/explain")

@@ -1,10 +1,13 @@
-package com.example.indexer.lucene;
+package com.example.indexer.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.lucene.search.ScoreDoc;
+
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -19,3 +22,4 @@ public class SearchResult {
     @JsonIgnore
     private String hash;
 }
+
